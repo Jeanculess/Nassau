@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>Houlomètre</title>
+<style>
+html,body{height:100%;margin:0;background:#000;color:#e8eef2;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;overflow:hidden;-webkit-text-size-adjust:100%}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:12px 14px 4px}
+.k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7b8b97}
+.v{font-size:clamp(26px,9vw,40px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;color:#fff;white-space:nowrap}
+.v small{font-size:.42em;font-weight:600;color:#aab8c3}
+.feel{padding:4px 14px 6px;font-size:14px;color:#aab8c3;min-height:20px;display:flex;align-items:center;gap:8px}
+.live{display:inline-block;width:9px;height:9px;border-radius:50%;background:#52d19f;animation:b 1s infinite}
+@keyframes b{50%{opacity:.15}}
+canvas{flex:1;width:100%;min-height:0;display:block;touch-action:none}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);flex-direction:column;gap:16px;text-align:center;padding:24px}
+#start button{font:inherit;font-size:22px;font-weight:800;padding:18px 36px;border-radius:999px;border:0;background:#ff64b4;color:#1b0a13}
+#start p{color:#aab8c3;font-size:15px;max-width:30ch;margin:0;line-height:1.4}
+#err{color:#ff7f76;font-size:14px;max-width:32ch}
+.foot{padding:4px 14px 10px;font-size:12px;color:#5f6f7b;display:flex;justify-content:space-between;gap:10px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div><div class="k">Hauteur sig.</div><div class="v" id="hs">—</div></div>
+    <div><div class="k">Plus haute</div><div class="v" id="hmax">—</div></div>
+    <div><div class="k">Période</div><div class="v" id="tz">—</div></div>
+  </div>
+  <div class="feel"><span class="live"></span><span id="feel">en attente</span></div>
+  <canvas id="c"></canvas>
+  <div class="foot"><span id="scale">± 0,10 m</span><span id="acc">a 0,00 m/s²</span><span>30 s</span></div>
+</div>
+<div id="start">
+  <button id="go" type="button">Démarrer</button>
+  <p>Pose le téléphone à plat, écran vers le ciel, sur une surface fixe. Safari demandera l’accès au mouvement.</p>
+  <div id="err"></div>
+</div>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var canvas=$('c'),ctx=canvas.getContext('2d'),dpr=Math.min(2,window.devicePixelRatio||1);
+function resize(){var r=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr))}
+window.addEventListener('resize',resize);
+/* --- état --- */
+var raw=[],live=[],simT=0,n=0,lastReal=0,lastHeave=null,stat=null,wake=null;
+var gx=0,gy=0,gz=0,gcount=0,aLP=0,aHP=0,v=0,z=0,curA=0;
+/* --- FFT --- */
+function fft(re,im,inv){var N=re.length;
+  for(var i=1,j=0;i<N;i++){var bit=N>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){var t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}}
+  for(var len=2;len<=N;len<<=1){var ang=2*Math.PI/len*(inv?1:-1),wr=Math.cos(ang),wi=Math.sin(ang),h=len>>1;
+    for(var s=0;s<N;s+=len){var cr=1,ci=0;for(var k=0;k<h;k++){var a=s+k,b=a+h,vr=re[b]*cr-im[b]*ci,vi=re[b]*ci+im[b]*cr;re[b]=re[a]-vr;im[b]=im[a]-vi;re[a]+=vr;im[a]+=vi;var nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr}}}
+  if(inv){for(var q=0;q<N;q++){re[q]/=N;im[q]/=N}}}
+function compute(){
+  var N=1;while(N*2<=raw.length&&N<4096)N*=2;if(N<1024){lastHeave=null;return}
+  var s=raw.slice(raw.length-N),fs=(N-1)/(s[N-1].t-s[0].t);
+  var mx=0,my=0,mz=0;for(var i=0;i<N;i++){mx+=s[i].x;my+=s[i].y;mz+=s[i].z}mx/=N;my/=N;mz/=N;
+  var gn=Math.sqrt(mx*mx+my*my+mz*mz)||9.81;
+  var re=new Float64Array(N),im=new Float64Array(N);
+  for(var j=0;j<N;j++)re[j]=(s[j].x*mx+s[j].y*my+s[j].z*mz)/gn-gn;
+  var sx=0,sy=0,sxx=0,sxy=0;for(var k=0;k<N;k++){sx+=k;sy+=re[k];sxx+=k*k;sxy+=k*re[k]}
+  var bb=(N*sxy-sx*sy)/(N*sxx-sx*sx),aa=(sy-bb*sx)/N;for(var m=0;m<N;m++)re[m]-=aa+bb*m;
+  fft(re,im,false);var best=0,fpeak=0;
+  for(var q=0;q<N;q++){var f=(q<=N/2?q:q-N)*fs/N,af=Math.abs(f);
+    if(af<0.05||af>0.8){re[q]=0;im[q]=0;continue}
+    var w2=Math.pow(2*Math.PI*af,2);re[q]=-re[q]/w2;im[q]=-im[q]/w2;
+    var pw=re[q]*re[q]+im[q]*im[q];if(q<=N/2&&pw>best){best=pw;fpeak=af}}
+  fft(re,im,true);lastHeave={z:re,fs:fs,tp:fpeak?1/fpeak:0};
+  var zz=re,lo=Math.floor(N*0.08),hi=Math.ceil(N*0.92),mean=0,c=0;for(var u=lo;u<hi;u++){mean+=zz[u];c++}mean/=c;
+  var vs=0;for(var w=lo;w<hi;w++){var d=zz[w]-mean;vs+=d*d}var sigma=Math.sqrt(vs/c);
+  var ups=[],prev=zz[lo]-mean;for(var p=lo+1;p<hi;p++){var cur=zz[p]-mean;if(prev<0&&cur>=0)ups.push(p);prev=cur}
+  var waves=[];for(var e=0;e<ups.length-1;e++){var top=-1e9,bot=1e9;for(var g=ups[e];g<ups[e+1];g++){var qq=zz[g]-mean;if(qq>top)top=qq;if(qq<bot)bot=qq}waves.push({h:top-bot,T:(ups[e+1]-ups[e])/fs})}
+  waves=waves.filter(function(x){return x.T>=1.2});
+  var sorted=waves.slice().sort(function(a,b){return b.h-a.h}),third=Math.max(1,Math.round(sorted.length/3)),h13=0;
+  for(var r=0;r<third&&r<sorted.length;r++)h13+=sorted[r].h;h13=sorted.length?h13/third:0;
+  var tz=0;for(var y=0;y<waves.length;y++)tz+=waves[y].T;tz=waves.length?tz/waves.length:0;
+  stat={hs:sorted.length>=3?h13:4*sigma,hmax:sorted.length?sorted[0].h:0,tz:tz,tp:lastHeave.tp,count:waves.length,span:(hi-lo)/fs};
+}
+function fmt(x,d){return x.toFixed(d).replace('.',',')}
+function feel(hs){return hs<0.15?'mer plate':hs<0.4?'mer belle':hs<0.8?'mer peu agitée':hs<1.5?'mer agitée':hs<2.5?'mer forte':'mer très forte'}
+function showStats(){
+  if(!stat){$('feel').textContent='calage… '+Math.round(simT)+' s sur 17';return}
+  $('hs').innerHTML=fmt(stat.hs,stat.hs<1?2:1)+'<small> m</small>';
+  $('hmax').innerHTML=fmt(stat.hmax,stat.hmax<1?2:1)+'<small> m</small>';
+  $('tz').innerHTML=(stat.tz?fmt(stat.tz,1):'—')+'<small> s</small>';
+  $('feel').textContent=feel(stat.hs)+' · '+stat.count+' vagues sur '+Math.round(stat.span)+' s'+(stat.tp?' · pic '+fmt(stat.tp,1)+' s':'');
+}
+/* --- capteur --- */
+function onMotion(e){
+  var g=e.accelerationIncludingGravity;if(!g||g.x==null||g.z==null)return;
+  var dt=(e.interval&&e.interval>5&&e.interval<200)?e.interval/1000:0;
+  if(!dt){var now=performance.now();dt=lastReal?Math.min(0.1,Math.max(0.005,(now-lastReal)/1000)):1/60;lastReal=now}
+  simT+=dt;n++;var y=g.y||0;
+  raw.push({t:simT,x:g.x,y:y,z:g.z});if(raw.length>5000)raw.splice(0,raw.length-5000);
+  /* trace en direct : filtre causal (gravité lente, passe-bande, double intégration à fuite) */
+  if(gcount<30){gx+=g.x;gy+=y;gz+=g.z;gcount++;if(gcount===30){gx/=30;gy/=30;gz/=30}return}
+  var ag=dt/10;gx+=(g.x-gx)*ag;gy+=(y-gy)*ag;gz+=(g.z-gz)*ag;
+  var gn=Math.sqrt(gx*gx+gy*gy+gz*gz)||9.81;
+  var av=(g.x*gx+y*gy+g.z*gz)/gn-gn;
+  aLP+=(av-aLP)*(dt/0.25);aHP+=(aLP-aHP)*(dt/6);var a=aLP-aHP;curA=aLP;
+  v+=a*dt;v*=1-dt/6;z+=v*dt;z*=1-dt/6;
+  live.push({t:simT,z:z});while(live.length&&live[0].t<simT-30)live.shift();
+  if(n%60===0){compute();showStats()}
+}
+/* --- dessin 60 i/s --- */
+function draw(){
+  requestAnimationFrame(draw);
+  var W=canvas.width,H=canvas.height;if(!W||!H)return;
+  ctx.clearRect(0,0,W,H);
+  var m=live.length,mean=0,mx=0.1;
+  for(var i=0;i<m;i++)mean+=live[i].z;if(m)mean/=m;
+  for(var j=0;j<m;j++){var d=Math.abs(live[j].z-mean);if(d>mx)mx=d}
+  var pad=10*dpr,mid=H/2,amp=H/2-pad;
+  /* grille : 5 s */
+  ctx.strokeStyle='#1c2a35';ctx.lineWidth=1;
+  for(var s=0;s<=30;s+=5){var gxp=W-s/30*W;ctx.beginPath();ctx.moveTo(gxp,0);ctx.lineTo(gxp,H);ctx.stroke()}
+  ctx.strokeStyle='#2a3d4b';ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();
+  for(var lv=0.25;lv<=1.5;lv+=0.25){if(lv>mx)break;var yy=lv/mx*amp;ctx.strokeStyle='#172430';ctx.beginPath();ctx.moveTo(0,mid-yy);ctx.lineTo(W,mid-yy);ctx.moveTo(0,mid+yy);ctx.lineTo(W,mid+yy);ctx.stroke()}
+  if(m<2){return}
+  var tNow=live[m-1].t;
+  ctx.lineWidth=2.5*dpr;ctx.strokeStyle='#72bde0';ctx.lineJoin='round';ctx.beginPath();
+  for(var k=0;k<m;k++){var x=W-(tNow-live[k].t)/30*W,yv=mid-(live[k].z-mean)/mx*amp;if(k===0)ctx.moveTo(x,yv);else ctx.lineTo(x,yv)}
+  ctx.stroke();
+  /* tête lumineuse */
+  var hz=mid-(live[m-1].z-mean)/mx*amp;
+  ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(W-3*dpr,hz,5*dpr,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(114,189,224,.35)';ctx.beginPath();ctx.arc(W-3*dpr,hz,12*dpr,0,Math.PI*2);ctx.fill();
+  /* lecture instantanée */
+  ctx.fillStyle='#e8eef2';ctx.font=(13*dpr)+'px system-ui,sans-serif';ctx.textAlign='right';
+  ctx.fillText((live[m-1].z-mean>=0?'+':'−')+fmt(Math.abs(live[m-1].z-mean),2)+' m',W-18*dpr,hz-10*dpr);
+  $('scale').textContent='± '+fmt(mx,2)+' m';$('acc').textContent='a '+fmt(curA,2)+' m/s²';
+}
+/* --- démarrage --- */
+function go(){
+  $('start').style.display='none';resize();
+  window.addEventListener('devicemotion',onMotion);
+  $('feel').textContent='calage… 0 s sur 17';
+  setTimeout(function(){if(n<10){$('start').style.display='flex';$('err').textContent='Aucune donnée de mouvement. Ouvre cette adresse directement dans Safari (pas dans une app) et accepte « Mouvement et orientation ».'}},4000);
+  function lock(){try{if(navigator.wakeLock&&navigator.wakeLock.request)navigator.wakeLock.request('screen').then(function(w){wake=w}).catch(function(){})}catch(e){}}
+  lock();document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')lock()});
+  requestAnimationFrame(draw);
+}
+$('go').addEventListener('click',function(){
+  if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
+    DeviceMotionEvent.requestPermission().then(function(r){if(r==='granted')go();else $('err').textContent='Accès refusé. Réglages → Safari → Mouvement et orientation, puis recharge la page.'}).catch(function(){$('err').textContent='Impossible de demander l’accès ici. Ouvre l’adresse directement dans Safari.'});
+  }else if('DeviceMotionEvent' in window){go()}else{$('err').textContent='Pas de capteur de mouvement accessible.'}
+});
+resize();
+})();
+</script>
+</body>
+</html>
