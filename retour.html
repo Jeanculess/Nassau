@@ -74,6 +74,16 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--cond);font
 .bars button[aria-pressed=true]{outline:2px solid var(--ink);outline-offset:1px}
 .bars button span{position:absolute;left:0;right:0;bottom:-15px;font-size:.62rem;color:var(--dim);text-align:center;font-family:var(--mono)}
 .bars-wrap{padding-bottom:16px}
+.heat{display:grid;grid-template-columns:44px repeat(13,1fr);gap:2px;align-items:center}
+.heat .hl{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);font-family:var(--cond);padding-right:4px;white-space:nowrap}
+.heat .hh{font-family:var(--mono);font-size:.6rem;color:var(--dim);text-align:center}
+.heat button{border:0;padding:0;height:22px;border-radius:4px;background:var(--panel-2);color:transparent;font-family:var(--mono);font-size:.6rem;cursor:pointer;min-width:0}
+.heat button.g1{background:color-mix(in srgb,var(--red) 70%,var(--panel))}.heat button.g2{background:color-mix(in srgb,var(--amber) 70%,var(--panel))}.heat button.g3{background:color-mix(in srgb,var(--green) 45%,var(--panel))}.heat button.g4{background:var(--green)}
+.heat button.n{background:var(--panel-2);opacity:.5}
+.heat button[aria-pressed=true]{outline:2px solid var(--ink);outline-offset:1px;color:var(--bg);font-weight:700}
+.alert{display:none;background:color-mix(in srgb,var(--amber) 22%,var(--panel));border:1px solid var(--amber);border-radius:10px;padding:7px 10px;font-size:.86rem;color:var(--ink)}
+.alert.on{display:block}
+.map .track{fill:none;stroke:var(--cyan);stroke-width:2.5;stroke-dasharray:1 5;stroke-linecap:round}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .days button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 2px;color:var(--ink);font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
 .days button b{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
@@ -158,6 +168,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
     <section class="screen" id="s-mer">
       <h1>Mer <span id="dep-line">—</span></h1>
+      <div class="alert" id="alert"></div>
       <div class="tile wide verdict"><div class="score num" id="score">—</div><div><div class="t" id="verdict">—</div><div class="d" id="verdict-d">—</div></div></div>
       <div class="grid">
         <div class="tile"><div class="k">Vent <span id="wind-dir"></span></div><div class="v"><span id="wind">—</span><small>nds</small></div><div class="s" id="wind-s">—</div><svg class="arrow" viewBox="0 0 24 24" id="wind-arrow"><path d="M12,2 L17,13 L12,10.5 L7,13 Z"/></svg><svg class="spark" id="wind-spark" viewBox="0 0 100 18" preserveAspectRatio="none"></svg></div>
@@ -168,6 +179,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
         <div class="tile"><div class="k">Lumière</div><div class="v"><span id="light">—</span></div><div class="s" id="light-s">—</div></div>
       </div>
       <div class="tile wide"><div class="k">Heure de départ <span>score de confort</span></div><div class="bars-wrap"><div class="bars" id="hourbars"></div></div></div>
+      <div class="tile wide"><div class="k">Quand partir <span>jour × heure, score</span></div><div class="heat" id="heat"></div></div>
       <div class="tile wide"><div class="k">Jour <span>meilleure heure</span></div><div class="days" id="daybtns"></div></div>
       <div class="tile wide"><div class="k">NHC · Northern Bahamas <span id="nhc-issued"></span></div><div class="nhc" id="nhc"></div></div>
     </section>
@@ -177,7 +189,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
         <svg class="map" id="map" viewBox="0 0 1000 713" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Carte de la route Cocodimama – Nassau"></svg>
         <div class="zoomb"><button type="button" id="z-in">+</button><button type="button" id="z-out">−</button><button type="button" id="z-fit" style="font-family:var(--cond);font-size:.7rem">Cadrer</button></div>
         <div class="layers"><button type="button" data-layer="sea" aria-pressed="true">Mer</button><button type="button" data-layer="wind" aria-pressed="true">Vent</button><button type="button" data-layer="hours" aria-pressed="true">Heures</button><button type="button" data-layer="pos" aria-pressed="true">Position</button></div>
-        <div class="mapinfo"><div class="pill"><span>reste</span><b id="m-dist">—</b></div><div class="pill"><span>ETA</span><b id="m-eta">—</b></div><div class="pill"><span>cap</span><b id="m-brg">—</b></div><div class="src"><button type="button" data-src="gps" aria-pressed="false">GPS</button><button type="button" data-src="dr" aria-pressed="true">Estime</button><button type="button" data-src="man" aria-pressed="false">Main</button></div></div>
+        <div class="mapinfo"><div class="pill"><span>reste</span><b id="m-dist">—</b></div><div class="pill"><span>ETA</span><b id="m-eta">—</b></div><div class="pill"><span>cap</span><b id="m-brg">—</b></div><div class="src"><button type="button" id="rec" aria-pressed="false">Rec</button><button type="button" data-src="gps" aria-pressed="false">GPS</button><button type="button" data-src="dr" aria-pressed="true">Estime</button><button type="button" data-src="man" aria-pressed="false">Main</button></div></div>
       </div>
     </section>
 
@@ -321,6 +333,10 @@ function renderMer(){var cs=tripConds(state.day,state.time,state.speed,state.rou
   $('hourbars').innerHTML=hb.join('');$('hourbars').querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){state.time=b.dataset.t;save();renderAll()})});
   var db=[];days().slice(0,7).forEach(function(d){var best=null,bh=null;for(var h2=6;h2<=15;h2++){var s2=score(d,pad(h2)+':00',state.speed,state.route);if(s2!=null&&(best==null||s2>best)){best=s2;bh=h2}}var l2=scoreLabel(best);db.push('<button type="button" data-d="'+d+'" class="'+l2[1]+'" aria-pressed="'+(d===state.day?'true':'false')+'"><b>'+dow(d)+' '+(+d.slice(8,10))+'</b><i>'+(best==null?'—':best)+'</i><b>'+(bh!=null?bh+'h':'')+'</b></button>')});
   $('daybtns').innerHTML=db.join('');$('daybtns').querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){state.day=b.dataset.d;save();renderAll()})});
+  /* grille jour × heure */
+  var hg=['<span class="hl"></span>'];for(var hh=5;hh<=17;hh++)hg.push('<span class="hh">'+hh+'</span>');
+  days().slice(0,7).forEach(function(d){hg.push('<span class="hl">'+dow(d)+' '+(+d.slice(8,10))+'</span>');for(var h3=5;h3<=17;h3++){var ts3=pad(h3)+':00',s3=score(d,ts3,state.speed,state.route),cls=s3==null?'n':s3>=75?'g4':s3>=55?'g3':s3>=35?'g2':'g1';hg.push('<button type="button" class="'+cls+'" data-d="'+d+'" data-t="'+ts3+'" aria-pressed="'+((d===state.day&&ts3===state.time.slice(0,2)+':00')?'true':'false')+'" title="'+(s3==null?'—':s3)+'">'+(s3==null?'':s3)+'</button>')}});
+  $('heat').innerHTML=hg.join('');$('heat').querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){state.day=b.dataset.d;state.time=b.dataset.t;save();renderAll()})});
   /* NHC : ligne du jour */
   var z=H().nhc.zone||'',dn=dow(state.day,true),map={lundi:'MON',mardi:'TUE',mercredi:'WED',jeudi:'THU',vendredi:'FRI',samedi:'SAT',dimanche:'SUN'},tag='.'+map[dn],lines=z.split('\n'),out=[],on=false;
   lines.forEach(function(l){if(l.indexOf(tag+'...')===0||l.indexOf(tag+' NIGHT')===0){on=true;out.push(l)}else if(/^\.[A-Z]/.test(l)){on=false}else if(on)out.push(l)});
@@ -342,6 +358,7 @@ function renderMap(){var svg=$('map'),r=ROUTES[state.route],cs=tripConds(state.d
     if(layers.wind&&cs[i]&&cs[i].wind!=null)o.push('<g class="wind">'+windGlyph(q[0],q[1]+26,cs[i].wdir||0,cs[i].wind)+'</g>')});
   /* coucher du soleil sur la route */
   var legs=routeLegs(r),t0=localToDate(state.day+'T'+state.time).getTime(),ev=sunEvents(state.day,25.15,-76.9);if(ev.set!=null){var setT=localToDate(state.day).getTime()+ev.set*60000,dSet=(setT-t0)/3600000*state.speed;if(dSet>0&&dSet<legs[legs.length-1]){var ps=posAlong(dSet);var qs=px(ps[0],ps[1]);o.push('<circle class="sun" cx="'+qs[0].toFixed(1)+'" cy="'+qs[1].toFixed(1)+'" r="7"/><text class="sunl" x="'+(qs[0]+10).toFixed(1)+'" y="'+(qs[1]+22).toFixed(1)+'">coucher '+hm(ev.set)+'</text>')}}
+  if(layers.pos)o.push(trackSvg());
   if(layers.pos&&fix){var qf=px(fix.lat,fix.lon),cog=fix.cog!=null?fix.cog:brg([fix.lat,fix.lon],[r.pts[r.pts.length-1][0],r.pts[r.pts.length-1][1]]);o.push('<g class="me" transform="translate('+qf[0].toFixed(1)+','+qf[1].toFixed(1)+')"><circle class="h" r="18"/><circle class="d" r="7"/><path d="M0,-16 L6,-4 L0,-7 L-6,-4 Z" transform="rotate('+cog.toFixed(0)+')"/></g>')}
   svg.innerHTML=o.join('');setVB();renderMapInfo()}
 function posAlong(d){var r=ROUTES[state.route],legs=routeLegs(r);for(var i=0;i<legs.length-1;i++){if(d<=legs[i+1]){var f=(d-legs[i])/(legs[i+1]-legs[i]);return [r.pts[i][0]+(r.pts[i+1][0]-r.pts[i][0])*f,r.pts[i][1]+(r.pts[i+1][1]-r.pts[i][1])*f]}}var l=r.pts[r.pts.length-1];return [l[0],l[1]]}
@@ -359,12 +376,18 @@ function renderMapInfo(){var r=ROUTES[state.route],end=r.pts[r.pts.length-1];if(
 })();
 /* ---------- position ---------- */
 var watchId=null,prevFix=null;
-function setSrc(s){state.src=s;save();document.querySelectorAll('.src button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.src===s?'true':'false')});if(s!=='gps'&&watchId!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(watchId)}catch(e){}watchId=null;$('led-gps').className='led'}
+function setSrc(s){state.src=s;save();document.querySelectorAll('.src button[data-src]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.src===s?'true':'false')});if(s!=='gps'&&watchId!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(watchId)}catch(e){}watchId=null;$('led-gps').className='led'}
   if(s==='gps')startGps();else if(s==='dr')updateDR();else if(s==='man'){if(state.man)fix={lat:state.man[0],lon:state.man[1],speed:null,cog:null};openSheet()}renderMap()}
-function startGps(){if(!navigator.geolocation){$('led-gps').className='led warn';return}try{watchId=navigator.geolocation.watchPosition(function(p){var c=p.coords,now=Date.now(),sp=(c.speed!=null&&isFinite(c.speed))?c.speed*1.943844:null,cog=(c.heading!=null&&isFinite(c.heading))?c.heading:null;if((sp==null||cog==null)&&prevFix&&now-prevFix.t>8000){var d=dist([prevFix.lat,prevFix.lon],[c.latitude,c.longitude]),h=(now-prevFix.t)/3600000;if(sp==null&&h>0)sp=d/h;if(cog==null&&d>0.02)cog=brg([prevFix.lat,prevFix.lon],[c.latitude,c.longitude])}if(!prevFix||now-prevFix.t>8000)prevFix={lat:c.latitude,lon:c.longitude,t:now};fix={lat:c.latitude,lon:c.longitude,speed:sp,cog:cog,acc:c.accuracy};$('led-gps').className='led on';renderMap()},function(){$('led-gps').className='led warn'},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}catch(e){$('led-gps').className='led warn'}}
+function startGps(){if(!navigator.geolocation){$('led-gps').className='led warn';return}try{watchId=navigator.geolocation.watchPosition(function(p){var c=p.coords,now=Date.now(),sp=(c.speed!=null&&isFinite(c.speed))?c.speed*1.943844:null,cog=(c.heading!=null&&isFinite(c.heading))?c.heading:null;if((sp==null||cog==null)&&prevFix&&now-prevFix.t>8000){var d=dist([prevFix.lat,prevFix.lon],[c.latitude,c.longitude]),h=(now-prevFix.t)/3600000;if(sp==null&&h>0)sp=d/h;if(cog==null&&d>0.02)cog=brg([prevFix.lat,prevFix.lon],[c.latitude,c.longitude])}if(!prevFix||now-prevFix.t>8000)prevFix={lat:c.latitude,lon:c.longitude,t:now};fix={lat:c.latitude,lon:c.longitude,speed:sp,cog:cog,acc:c.accuracy};$('led-gps').className='led on';recPoint();renderMap();renderArr()},function(){$('led-gps').className='led warn'},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}catch(e){$('led-gps').className='led warn'}}
 function updateDR(){var t0=localToDate(state.day+'T'+state.time).getTime(),el=(Date.now()-t0)/3600000;if(el<0||el*state.speed>routeLegs(ROUTES[state.route]).slice(-1)[0]+5){fix=null;return}var p=posAlong(el*state.speed);var nxt=posAlong(el*state.speed+1);fix={lat:p[0],lon:p[1],speed:state.speed,cog:brg(p,nxt),dr:true}}
-document.querySelectorAll('.src button').forEach(function(b){b.addEventListener('click',function(){setSrc(b.dataset.src)})});
+document.querySelectorAll('.src button[data-src]').forEach(function(b){b.addEventListener('click',function(){setSrc(b.dataset.src)})});
 $('f-man-go').addEventListener('click',function(){var la=parseFloat(($('f-lat').value||'').replace(',','.')),lo=parseFloat(($('f-lon').value||'').replace(',','.'));if(isFinite(la)&&isFinite(lo)){state.man=[la,lo];save();fix={lat:la,lon:lo,speed:null,cog:null};setSrc('man');closeSheet()}});
+/* ---------- enregistreur de trace ---------- */
+var TRACK=store.get('retour-track')||[],recOn=false,lastRec=0;
+function recPoint(){if(!recOn||!fix||fix.dr)return;var now=Date.now();if(now-lastRec<30000)return;lastRec=now;TRACK.push([Math.round(now/1000),+fix.lat.toFixed(5),+fix.lon.toFixed(5),fix.speed==null?null:+fix.speed.toFixed(1)]);if(TRACK.length>4000)TRACK.splice(0,TRACK.length-4000);store.set('retour-track',TRACK)}
+function trackSvg(){if(TRACK.length<2)return '';return '<polyline class="track" points="'+TRACK.map(function(p){var q=px(p[1],p[2]);return q[0].toFixed(1)+','+q[1].toFixed(1)}).join(' ')+'"/>'}
+function trackStats(){if(TRACK.length<2)return null;var d=0;for(var i=1;i<TRACK.length;i++)d+=dist([TRACK[i-1][1],TRACK[i-1][2]],[TRACK[i][1],TRACK[i][2]]);var h=(TRACK[TRACK.length-1][0]-TRACK[0][0])/3600;return {nm:d,hours:h,avg:h>0?d/h:0,n:TRACK.length}}
+$('rec').addEventListener('click',function(){if(!recOn){recOn=true;$('rec').setAttribute('aria-pressed','true');if(state.src!=='gps')setSrc('gps')}else{recOn=false;$('rec').setAttribute('aria-pressed','false');var s=trackStats();if(s){var txt='Trace '+s.n+' points · '+fr(s.nm,1)+' M en '+dur(s.hours*60)+' · moyenne '+fr(s.avg,1)+' nds\n'+TRACK.map(function(p){return new Date(p[0]*1000).toISOString()+' '+p[1]+' '+p[2]+(p[3]!=null?' '+p[3]+' kn':'')}).join('\n');try{navigator.clipboard.writeText(txt).then(function(){$('alert').textContent='Trace copiée : '+fr(s.nm,1)+' M, moyenne '+fr(s.avg,1)+' nds';$('alert').classList.add('on')},function(){})}catch(e){}}}});
 /* ---------- Ciel ---------- */
 function renderCiel(){var r=ROUTES[state.route],legs=routeLegs(r),total=legs[legs.length-1],durMin=total/state.speed*60,depMin=(+state.time.slice(0,2))*60+(+state.time.slice(3,5)),etaMin=depMin+durMin;
   var evD=sunEvents(state.day,r.pts[0][0],r.pts[0][1]),evA=sunEvents(state.day,r.pts[r.pts.length-1][0],r.pts[r.pts.length-1][1]);
@@ -393,7 +416,7 @@ function renderArr(){var r=ROUTES[state.route],legs=routeLegs(r),total=legs[legs
   var ev=sunEvents(ek.slice(0,10),25.08,-77.33),em=(+ek.slice(11,13))*60+(+ek.slice(14,16));$('a-light').textContent=ev.set!=null&&em<ev.set?dur(ev.set-em):'nuit';$('a-light-s').textContent=ev.set!=null?'coucher '+hm(ev.set)+' à Nassau':'—';
   var cE=condAt(4,eta);$('arr-list').innerHTML=['<div class="row"><div>Conditions à l’arrivée<small>chenal est de Nassau</small></div><b>'+(cE.wind!=null?Math.round(cE.wind)+' nds '+compass(cE.wdir||0):'—')+' · '+(cE.hs!=null?fr(cE.hs,1)+' m':'—')+'</b></div>',
     '<div class="row"><div>Vers l’aéroport<small>Potter’s Cay → NAS, taxi 25 à 35 min, préclearance USA sur place</small></div><b>~ 35 $</b></div>',
-    '<div class="row"><div>Bahamas Ferries · Potter’s Cay<small>si retour par le ferry</small></div><b>+1 242 323-2166</b></div>'].join('')}
+    '<div class="row"><div>Bahamas Ferries · Potter’s Cay<small>si retour par le ferry</small></div><b>+1 242 323-2166</b></div>'].concat((function(){var s=trackStats();return s?['<div class="row"><div>Trace enregistrée<small>'+s.n+' points, bouton Rec sur la carte</small></div><b>'+fr(s.nm,1)+' M · '+fr(s.avg,1)+' nds</b></div>']:[]})()).join('')}
 /* ---------- thème, onglets, réglages ---------- */
 function applyTheme(){var t=state.theme;if(t==='auto'){var s=solar(new Date(),25.2,-76.8);t=s.elev>-3?'day':'night'}document.documentElement.setAttribute('data-theme',t)}
 var deck=$('deck');function goTo(i){deck.scrollTo({left:deck.clientWidth*i,behavior:'smooth'})}
@@ -417,7 +440,7 @@ var URL_FC='https://api.open-meteo.com/v1/forecast?latitude='+LAT+'&longitude='+
 var URL_M='https://marine-api.open-meteo.com/v1/marine?latitude='+LAT+'&longitude='+LON+'&hourly=wave_height,wave_direction,wave_period,wind_wave_height,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature,sea_level_height_msl&timezone=America%2FNassau&forecast_days=7';
 function getJSON(u){var c=('AbortController' in window)?new AbortController():null,to=c?setTimeout(function(){c.abort()},15000):null;return fetch(u,{cache:'no-store',signal:c?c.signal:undefined}).then(function(r){if(to)clearTimeout(to);return r.json()})}
 function adopt(fcj,mj,when){if(!Array.isArray(fcj)||!Array.isArray(mj)||fcj.length<5||mj.length<5||!fcj[0].hourly)return false;var snap={fetchedAt:when,utc:fcj[0].utc_offset_seconds,time:fcj[0].hourly.time,fc:fcj.map(function(p){var o={};Object.keys(p.hourly).forEach(function(k){if(k!=='time')o[k]=p.hourly[k]});return o}),marine:mj.map(function(p){var o={};Object.keys(p.hourly).forEach(function(k){if(k!=='time')o[k]=p.hourly[k]});return o}),tides:SNAP.tides,nhc:SNAP.nhc};DATA.snap=snap;DATA.fetchedAt=when;OFFSET=(snap.utc||-14400)/3600;return true}
-function refresh(){Promise.all([getJSON(URL_FC),getJSON(URL_M)]).then(function(res){var when=dateToLocalKey(new Date());if(adopt(res[0],res[1],when)){DATA.live=true;store.set('retour-cache',{fc:res[0],m:res[1],when:when});$('led-data').className='led on';ensureDay();renderAll()}else $('led-data').className='led warn'}).catch(function(){$('led-data').className=DATA.live?'led on':'led warn'})}
+function refresh(){var before=score(state.day,state.time,state.speed,state.route);Promise.all([getJSON(URL_FC),getJSON(URL_M)]).then(function(res){var when=dateToLocalKey(new Date());if(adopt(res[0],res[1],when)){DATA.live=true;var after=score(state.day,state.time,state.speed,state.route);if(before!=null&&after!=null&&Math.abs(after-before)>=8){$('alert').textContent='Mise à jour '+when.slice(11)+' : le score du départ '+dow(state.day)+' '+state.time+' passe de '+before+' à '+after+(after<before?' · fenêtre qui se dégrade':' · fenêtre qui s’améliore');$('alert').classList.add('on')}store.set('retour-cache',{fc:res[0],m:res[1],when:when});$('led-data').className='led on';ensureDay();renderAll()}else $('led-data').className='led warn'}).catch(function(){$('led-data').className=DATA.live?'led on':'led warn'})}
 (function(){var c=store.get('retour-cache');if(c&&c.when&&c.when>SNAP.fetchedAt&&adopt(c.fc,c.m,c.when))DATA.live=false})();
 /* ---------- boucle ---------- */
 function renderAll(){ensureDay();if(state.src==='dr')updateDR();renderMer();renderMap();renderCiel();renderArr();fillSettings()}
