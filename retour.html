@@ -61,6 +61,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--cond);font
 .tile .v small{font-family:var(--cond);font-size:.5em;font-weight:500;color:var(--dim);margin-left:3px;letter-spacing:.06em}
 .tile .s{font-size:.74rem;color:var(--dim);line-height:1.15;max-height:2.3em;overflow:hidden}
 .tile .arrow{position:absolute;right:8px;top:8px;width:22px;height:22px}
+.tile.hasarrow .k{padding-right:26px}
 .tile .arrow path{fill:var(--amber)}
 .tile.sea .arrow path{fill:var(--cyan)}
 .tile svg.spark{width:100%;height:18px;display:block;margin-top:2px}
@@ -240,8 +241,8 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
       <div class="alert" id="warn"></div>
       <div class="tile wide verdict"><div class="score num" id="score">—</div><div><div class="t" id="verdict">—</div><div class="d" id="verdict-d">—</div><div class="why num" id="why"></div></div></div>
       <div class="grid">
-        <div class="tile"><div class="k">Vent <span id="wind-dir"></span></div><div class="v"><span id="wind">—</span><small>nds</small></div><div class="s" id="wind-s">—</div><svg class="arrow" viewBox="0 0 24 24" id="wind-arrow"><path d="M12,2 L17,13 L12,10.5 L7,13 Z"/></svg><svg class="spark" id="wind-spark" viewBox="0 0 100 18" preserveAspectRatio="none"></svg></div>
-        <div class="tile sea"><div class="k">Mer</div><div class="v"><span id="hs">—</span><small>m</small></div><div class="s" id="hs-s">—</div><svg class="arrow" viewBox="0 0 24 24" id="hs-arrow"><path d="M12,2 L17,13 L12,10.5 L7,13 Z"/></svg><svg class="spark" id="hs-spark" viewBox="0 0 100 18" preserveAspectRatio="none"></svg></div>
+        <div class="tile hasarrow"><div class="k">Vent <span id="wind-dir"></span></div><div class="v"><span id="wind">—</span><small>nds</small></div><div class="s" id="wind-s">—</div><svg class="arrow" viewBox="0 0 24 24" id="wind-arrow"><path d="M12,2 L17,13 L12,10.5 L7,13 Z"/></svg><svg class="spark" id="wind-spark" viewBox="0 0 100 18" preserveAspectRatio="none"></svg></div>
+        <div class="tile sea hasarrow"><div class="k">Mer</div><div class="v"><span id="hs">—</span><small>m</small></div><div class="s" id="hs-s">—</div><svg class="arrow" viewBox="0 0 24 24" id="hs-arrow"><path d="M12,2 L17,13 L12,10.5 L7,13 Z"/></svg><svg class="spark" id="hs-spark" viewBox="0 0 100 18" preserveAspectRatio="none"></svg></div>
         <div class="tile"><div class="k">Pluie</div><div class="v"><span id="rain">—</span><small>%</small></div><div class="s" id="rain-s">—</div></div>
         <div class="tile"><div class="k">Visibilité</div><div class="v"><span id="vis">—</span><small>km</small></div><div class="s" id="vis-s">—</div></div>
         <div class="tile"><div class="k">Air · eau</div><div class="v"><span id="temp">—</span><small>°C</small></div><div class="s" id="temp-s">—</div></div>
@@ -427,7 +428,7 @@ function renderMer(){if(state.mode==='avion'){renderVol();return}var live=liveTr
   var visMin=null;cs.forEach(function(c){if(c.vis!=null&&(visMin==null||c.vis<visMin))visMin=c.vis});$('vis').textContent=visMin==null?'—':Math.round(visMin/1000);$('vis-s').textContent=visMin!=null?(visMin<5000?'réduite sous les grains':'bonne')+' · nuages '+Math.round(maxOf(cs,'cloud')||0)+' %':'—';
   $('temp').textContent=mid.temp==null?'—':Math.round(mid.temp);$('temp-s').textContent=mid.sst!=null?'eau '+Math.round(mid.sst)+' °C':'—';
   var ev=sunEvents(state.day,25.17,-76.8),depMin=(+state.time.slice(0,2))*60+(+state.time.slice(3,5)),etaMin=depMin+durMin;
-  var lightTxt=ev.rise!=null&&ev.set!=null?(etaMin<=ev.set&&depMin>=ev.rise?'jour':depMin<ev.rise?'nuit au départ':'nuit à l’arrivée'):'—';$('light').textContent=lightTxt;$('light-s').textContent=ev.rise!=null?'lever '+hm(ev.rise)+' · coucher '+hm(ev.set)+(etaMin>ev.set-60&&etaMin<=ev.set?' · arrivée au soleil couchant':''):'—';
+  var isDayTrip=ev.rise!=null&&ev.set!=null&&etaMin<=ev.set&&depMin>=ev.rise;$('light').textContent=ev.rise==null?'—':isDayTrip?'jour':'nuit';$('light-s').textContent=ev.rise==null?'—':(depMin<ev.rise?'au départ · lever '+hm(ev.rise):etaMin>ev.set?'à l’arrivée · coucher '+hm(ev.set):'lever '+hm(ev.rise)+' · coucher '+hm(ev.set))+(etaMin>ev.set-60&&etaMin<=ev.set?' · arrivée au couchant':'');
   /* heures de départ */
   var hb=[];for(var h=5;h<=17;h++){var ts=pad(h)+':00',s=score(state.day,ts,state.speed,state.route),l=scoreLabel(s);hb.push('<button type="button" data-t="'+ts+'" class="'+l[1]+(isPast(state.day,h)?' past':'')+'" aria-pressed="'+(ts===state.time.slice(0,2)+':00'?'true':'false')+'"><i style="height:'+(s==null?2:Math.max(4,s))+'%"></i><span>'+h+'h</span></button>')}
   $('hourbars').innerHTML=hb.join('');$('hourbars').querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){state.time=b.dataset.t;save();renderAll()})});
