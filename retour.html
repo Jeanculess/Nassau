@@ -148,6 +148,12 @@ button.wide{width:100%;font:inherit;font-size:.85rem;font-weight:700;letter-spac
 .profile .wind path{fill:none;stroke:var(--amber);stroke-width:1.6;stroke-linecap:round}.profile .wind text{fill:var(--amber)}
 .profile .me{fill:var(--cyan)}.profile .sun{fill:var(--amber)}.profile text.sunl{fill:var(--amber);font-family:var(--cond);font-size:11px}
 @media (orientation:landscape) and (max-height:500px){.profile{display:none}}
+/* courbe de marée */
+.tidebox svg{width:100%;height:auto;display:block;margin-top:2px}
+.tidebox .area{fill:var(--cyan);fill-opacity:.14}.tidebox .curve{fill:none;stroke:var(--cyan);stroke-width:2}
+.tidebox text{font-family:var(--mono);font-size:10px;fill:var(--dim);paint-order:stroke;stroke:var(--panel);stroke-width:3px}
+.tidebox .ext{fill:var(--cyan)}.tidebox .mark{stroke:var(--amber);stroke-width:1.5;stroke-dasharray:3 3}.tidebox .markdot{fill:var(--amber)}
+.tidebox text.markl{fill:var(--amber);font-family:var(--cond);font-size:12px;letter-spacing:.04em}.tidebox .now{fill:#fff;stroke:var(--amber);stroke-width:2}
 /* ciel */
 .arcbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
 .arcbox svg{width:100%;height:auto;display:block}
@@ -185,7 +191,7 @@ button.wide{width:100%;font:inherit;font-size:.85rem;font-weight:700;letter-spac
 .seg button[aria-pressed=true]{color:var(--ink);border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
 .scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:4;display:none}.scrim.open{display:block}
 .help{font-size:.78rem;color:var(--mute);letter-spacing:.02em;text-transform:none}
-@media (orientation:landscape) and (max-height:500px){.grid{grid-template-columns:repeat(6,1fr)}.tile.wide{grid-column:1/-1}.screen{gap:6px;padding-top:6px}.bars{height:34px}}
+@media (orientation:landscape) and (max-height:500px){.grid{grid-template-columns:repeat(6,1fr)}#s-dep .grid,#s-arr .grid{grid-template-columns:repeat(3,1fr)}.tile.wide{grid-column:1/-1}.screen{gap:6px;padding-top:6px}.bars{height:34px}}
 @media (prefers-reduced-motion:reduce){.sheet{transition:none}}
 button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 </style>
@@ -200,7 +206,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
     <section class="screen" id="s-dep">
       <h1>Départ <span id="dep-when">—</span></h1>
-      <div class="alert" id="hint">Glisse latéralement entre Départ, Mer, Route, Ciel et Arrivée. Réglages en haut à droite pour le jour, l’heure et la vitesse. Sur la carte : GPS, Estime, Main et Rec. Touche ici pour fermer.</div>
+      <div class="alert" id="hint">Glisse latéralement entre Départ, Mer, Route, Ciel et Arrivée. Réglages en haut à droite pour le jour, l’heure et la vitesse. Sur la carte : GPS, Estime, Main et Rec. Sur iPhone, Partager → « Sur l’écran d’accueil » pour l’avoir en plein écran. Touche ici pour fermer.</div>
       <div class="tile wide count"><div class="k" style="justify-content:center" id="count-k">Compte à rebours</div><div class="big num" id="countdown">—</div><div class="s" id="count-s">—</div></div>
       <div class="grid">
         <div class="tile"><div class="k">Score</div><div class="v" id="d-score">—</div><div class="s" id="d-score-s">—</div></div>
@@ -208,6 +214,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
         <div class="tile"><div class="k">Coucher</div><div class="v" id="d-sun">—</div><div class="s" id="d-sun-s">—</div></div>
       </div>
       <div class="tile wide"><div class="k">Météo au départ <span>Cocodimama</span></div><div class="wxline" id="d-wx">—</div></div>
+      <div class="tile wide tidebox"><div class="k">Marée côté plage <span id="d-tide-k">—</span></div><svg viewBox="0 0 360 100" id="d-tidesvg" role="img" aria-label="Courbe de marée du jour, côte ouest d’Eleuthera"></svg></div>
       <div class="tile wide"><div class="k">Avant de larguer <span id="d-check-n"></span></div><div class="check" id="checklist">
         <label><input type="checkbox" id="c1"><span>Passeport, billets, liquide pour le taxi</span></label>
         <label><input type="checkbox" id="c2"><span>Cette page ouverte avec le réseau, batterie pleine</span></label>
@@ -270,8 +277,10 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
         <div class="tile"><div class="k">Marée Nassau</div><div class="v"><span id="a-tide">—</span></div><div class="s" id="a-tide-s">—</div></div>
         <div class="tile"><div class="k">Jour restant</div><div class="v"><span id="a-light">—</span></div><div class="s" id="a-light-s">—</div></div>
       </div>
+      <div class="tile wide tidebox"><div class="k">Marée Nassau <span id="a-tide-k">—</span></div><svg viewBox="0 0 360 100" id="a-tidesvg" role="img" aria-label="Courbe de marée de Nassau le jour de l’arrivée"></svg></div>
       <div class="list" id="arr-list"></div>
       <div class="list">
+        <div class="row"><div>Nassau Harbour Control<small>appel VHF obligatoire avant d’entrer dans le port, par le capitaine</small></div><b>CH 16</b></div>
         <div class="row hot"><div>VHF 16 · Mayday<small>par le capitaine</small></div><b>CH 16</b></div>
         <div class="row hot"><div>Police · ambulance<small>Bahamas</small></div><b>919 · 911</b></div>
         <div class="row"><div>BASRA sauvetage en mer<small>Nassau</small></div><b>+1 242 325-8864</b></div>
@@ -366,6 +375,16 @@ function flightConds(dayKey,timeStr){var t0=localToDate(dayKey+'T'+timeStr).getT
 function flightScore(dayKey,timeStr){var cs=flightConds(dayKey,timeStr),p=0,n=0;cs.forEach(function(c){if(c.wind==null)return;n++;p+=Math.max(0,(c.gust||c.wind)-22)*3;if(c.code!=null&&c.code>=95)p+=40;else if(c.code!=null&&c.code>=80)p+=10;if(c.vis!=null&&c.vis<5000)p+=20;if(c.pp!=null)p+=c.pp*0.2;if(c.cloud!=null&&c.cloud>80)p+=5});if(!n)return null;return Math.max(0,Math.min(100,Math.round(100-p/n)))}
 function scoreLabel(s){if(state.mode==='avion')return s==null?['—','']:s>=75?['Vol tranquille','good']:s>=55?['Quelques secousses','']:s>=35?['Retards possibles','warn']:['Retards probables','bad'];return s==null?['—','']:s>=75?['Mer belle','good']:s>=55?['Correct','']:s>=35?['Remuant','warn']:['Mauvais','bad']}
 function tideAt(list,when){var k=dateToLocalKey(when),prev=null,next=null;for(var i=0;i<list.length;i++){var tt=list[i][0].replace(' ','T');if(tt<=k)prev=list[i];else{next=list[i];break}}if(!prev||!next)return null;var a=localToDate(prev[0].replace(' ','T')).getTime(),b=localToDate(next[0].replace(' ','T')).getTime(),f=(when.getTime()-a)/(b-a),h=prev[2]+(next[2]-prev[2])*(1-Math.cos(Math.PI*f))/2;return {h:h,rising:next[1]==='H',next:next}}
+function tideSvg(list,dayKey,marks){var t0=localToDate(dayKey).getTime(),W=360,x0=6,x1=W-6,yt=26,yb=74,o=[],pts=[],hmax=-9,hmin=9;
+  for(var m=0;m<=1440;m+=15){var h=tideAt(list,new Date(t0+m*60000));if(!h)continue;pts.push([m,h.h]);if(h.h>hmax)hmax=h.h;if(h.h<hmin)hmin=h.h}
+  if(pts.length<8)return '';var lo=Math.min(0,hmin-0.05),hi=hmax+0.12;function X(m){return x0+m/1440*(x1-x0)}function Y(h){return yb-(h-lo)/(hi-lo)*(yb-yt)}
+  var d=pts.map(function(p,i){return (i?'L':'M')+X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)}).join(' ');
+  o.push('<path class="area" d="'+d+' L'+X(pts[pts.length-1][0]).toFixed(1)+','+yb+' L'+X(pts[0][0]).toFixed(1)+','+yb+' Z"/><path class="curve" d="'+d+'"/>');
+  [0,6,12,18,24].forEach(function(h){o.push('<text x="'+X(h*60).toFixed(1)+'" y="'+(yb+12)+'" text-anchor="'+(h===0?'start':h===24?'end':'middle')+'">'+pad(h)+':00</text>')});
+  list.filter(function(e){return e[0].slice(0,10)===dayKey}).forEach(function(e){var m=(+e[0].slice(11,13))*60+(+e[0].slice(14,16)),x=X(m),y=Y(e[2]),anc=m<170?'start':m>1270?'end':'middle';o.push('<circle class="ext" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.5"/><text x="'+x.toFixed(1)+'" y="'+(y-6).toFixed(1)+'" text-anchor="'+anc+'">'+(e[1]==='H'?'PM ':'BM ')+e[0].slice(11)+' · '+fr(e[2],2)+'</text>')});
+  marks.forEach(function(k){if(k.m==null||k.m<0||k.m>1440)return;var h=tideAt(list,new Date(t0+k.m*60000)),x=X(k.m);o.push('<line class="mark" x1="'+x.toFixed(1)+'" y1="'+(yt-8)+'" x2="'+x.toFixed(1)+'" y2="'+yb+'"/>');if(h)o.push('<circle class="markdot" cx="'+x.toFixed(1)+'" cy="'+Y(h.h).toFixed(1)+'" r="4"/>');o.push('<text class="markl" x="'+(x+(k.m>960?-5:5)).toFixed(1)+'" y="'+(yt-12)+'" text-anchor="'+(k.m>960?'end':'start')+'">'+k.label+(h?' · '+fr(h.h,2)+' m, '+(h.rising?'monte':'descend'):'')+'</text>')});
+  var p=nowParts();if(dateKey(p)===dayKey){var nm=p.h*60+p.mi,hn=tideAt(list,new Date(t0+nm*60000));if(hn)o.push('<circle class="now" cx="'+X(nm).toFixed(1)+'" cy="'+Y(hn.h).toFixed(1)+'" r="3.5"/>')}
+  return o.join('')}
 function seaClass(hs){return hs==null?'s1':hs<0.6?'s0':hs<1.2?'s1':'s2'}
 /* ---------- rendu : Mer ---------- */
 function arrow(id,deg){var el=$(id);if(!el)return;el.style.transform='rotate('+((deg+180)%360)+'deg)';el.style.transformOrigin='50% 50%'}
@@ -384,7 +403,7 @@ function renderMer(){if(state.mode==='avion'){renderVol();return}var live=liveTr
   animNum('score',sc);$('score').className='score num '+lab[1];$('verdict').textContent=lab[0];
   var hsMax=maxOf(cs,'hs'),wMax=maxOf(cs,'wind'),gMax=maxOf(cs,'gust'),ppMax=maxOf(cs,'pp'),rainSum=0;cs.forEach(function(c){if(c.rain)rainSum+=c.rain});
   var worst=cs.reduce(function(a,c){return (c.hs||0)>(a.hs||0)?c:a},cs[0]);
-  var td0=tideAt(H().tides.eleuthera,localToDate(state.day+'T'+state.time));$('verdict-d').textContent=(hsMax!=null?'mer jusqu’à '+fr(hsMax,1)+' m ('+worst.name+', '+dateToLocalKey(worst.when).slice(11)+')':'')+(wMax!=null?' · vent jusqu’à '+Math.round(wMax)+' nds':'')+' · arrivée '+dateToLocalKey(eta).slice(11)+(td0?' · marée au départ '+fr(td0.h,2)+' m, '+(td0.rising?'montante':'descendante'):'')+(function(){var wa=windAgree(cs);return wa?' · vent '+Math.round(wa.lo)+'–'+Math.round(wa.hi)+' nds selon 82 scénarios, accord '+Math.round(wa.agree*100)+' %':''})();
+  var td0=tideAt(H().tides.eleuthera,localToDate(state.day+'T'+state.time));$('verdict-d').textContent=(hsMax!=null?'mer jusqu’à '+fr(hsMax,1)+' m ('+worst.name+', '+dateToLocalKey(worst.when).slice(11)+')':'')+(wMax!=null?' · vent jusqu’à '+Math.round(wMax)+' nds':'')+' · arrivée '+dateToLocalKey(eta).slice(11)+(td0?' · marée au départ '+fr(td0.h,2)+' m, '+(td0.rising?'montante':'descendante'):'')+(function(){var wa=windAgree(cs);return wa?' · vent '+Math.round(wa.lo)+'–'+Math.round(wa.hi)+' nds selon 82 scénarios, accord '+Math.round(wa.agree*100)+' %':''})()+(state.route==='current'?(function(){var tc=tideNear(H().tides.eleuthera,cs[2].when);return ' · Current Cut : courant fort, passer à l’étale ('+(tc.next?(tc.next[1]==='H'?'PM':'BM')+' côte ouest '+tc.next[0].slice(11):'—')+')'})():'');
   $('legs').innerHTML=cs.map(function(c,i){var course=i<r.pts.length-1?brg(r.pts[i],r.pts[i+1]):brg(r.pts[i-1],r.pts[i]),al=allure(relAngle(course,c.hdir));var sr=i<r.pts.length-1?sunRel(c.when,r.pts[i][0],r.pts[i][1],course):null;return '<tr><td>'+c.name+'</td><td>'+dateToLocalKey(c.when).slice(11)+'</td><td class="r">'+(c.wind==null?'—':Math.round(c.wind)+' <i>'+compass(c.wdir||0)+'</i>')+'</td><td class="r '+seaClass(c.hs)+'">'+(c.hs==null?'—':fr(c.hs,1)+' m')+'</td><td><i>'+(i<r.pts.length-1?al[0]+(sr?' · '+sr.replace('soleil ',''):''):'arrivée')+'</i></td></tr>'}).join('');$('legs-k').textContent='heure · vent · mer · allure · soleil';
   var mid=cs[Math.floor(cs.length/2)];
   $('wind').textContent=wMax==null?'—':Math.round(wMax);$('wind-dir').textContent=mid.wdir!=null?compass(mid.wdir):'';var app=apparent(cs[0],brg(r.pts[0],r.pts[1]),state.speed);$('wind-s').textContent=(gMax!=null?'rafales '+Math.round(gMax)+' nds':'')+(app!=null?' · apparent '+Math.round(app)+' nds':'');arrow('wind-arrow',mid.wdir||0);spark('wind-spark',cs.map(function(c){return c.wind}),30);
@@ -514,6 +533,7 @@ function renderDep(){var r=ROUTES[state.route],t0=localToDate(state.day+'T'+stat
   var td=tideAt(H().tides.eleuthera,t0);$('d-tide').textContent=td?fr(td.h,2):'—';$('d-tide-s').textContent=td?(td.rising?'montante':'descendante')+' · '+(td.next[1]==='H'?'PM':'BM')+' '+td.next[0].slice(11)+(td.h<0.35?' · peu d’eau':''):'—';
   var ev=sunEvents(state.day,r.pts[0][0],r.pts[0][1]),dm=(+state.time.slice(0,2))*60+(+state.time.slice(3,5));var legsD=routeLegs(r),durD=state.mode==='avion'?FLIGHT.minutes:legsD[legsD.length-1]/state.speed*60,am=dm+durD;$('d-sun').textContent=ev.set!=null?hm(ev.set):'—';$('d-sun-s').textContent=ev.rise==null?'—':dm<ev.rise?'départ de nuit, lever '+hm(ev.rise):am>ev.set?'arrivée de nuit':'encore '+dur(ev.set-am)+' de jour à l’arrivée';
   var c=condAt(state.mode==='avion'?0:0,t0);$('d-wx').innerHTML=['vent <b>'+(c.wind==null?'—':Math.round(c.wind)+' nds '+compass(c.wdir||0))+'</b>','rafales <b>'+(c.gust==null?'—':Math.round(c.gust))+'</b>','mer <b>'+(c.hs==null?'—':fr(c.hs,1)+' m')+'</b>','pluie <b>'+(c.pp==null?'—':Math.round(c.pp)+' %')+'</b>','air <b>'+(c.temp==null?'—':Math.round(c.temp)+' °C')+'</b>','eau <b>'+(c.sst==null?'—':Math.round(c.sst)+' °C')+'</b>','ciel <b>'+(c.code>=95?'orages':c.code>=80?'averses':c.cloud>80?'couvert':c.cloud>40?'nuageux':'dégagé')+'</b>'].map(function(x){return '<span>'+x+'</span>'}).join('');
+  $('d-tidesvg').innerHTML=tideSvg(H().tides.eleuthera,state.day,[{m:dm,label:(state.mode==='avion'?'vol ':'départ ')+state.time}]);$('d-tide-k').textContent=dow(state.day)+' '+(+state.day.slice(8,10))+' · côte ouest d’Eleuthera · MLLW';
   var n=document.querySelectorAll('#checklist input').length,k=document.querySelectorAll('#checklist input:checked').length;$('d-check-n').textContent=k+' / '+n;}
 function renderCount(){var t0=localToDate(state.day+'T'+state.time).getTime(),now=Date.now(),d=(t0-now)/1000,el=$('countdown');var r=ROUTES[state.route],legs=routeLegs(r),durS=(state.mode==='avion'?FLIGHT.minutes*60:legs[legs.length-1]/state.speed*3600);
   if(d>0){var h=Math.floor(d/3600),m=Math.floor(d%3600/60),s=Math.floor(d%60);el.textContent=h>0?h+' h '+pad(m)+' min':pad(m)+' min '+pad(s)+' s';el.className='big num';$('count-k').textContent='Départ dans';$('count-s').textContent=d<3600?'c’est bientôt, dernier point météo sur Mer':'à '+state.time+' · '+dow(state.day,true)+' '+(+state.day.slice(8,10))}
@@ -553,8 +573,9 @@ function renderArr(){var r=ROUTES[state.route],legs=routeLegs(r),total=legs[legs
   var ek=dateToLocalKey(eta);$('arr-line').textContent=dow(ek)+' '+(+ek.slice(8,10))+' · Nassau';$('a-eta').textContent=ek.slice(11);$('a-eta-s').textContent=state.mode==='avion'?'atterrissage NAS':(fix&&!fix.dr?'au GPS':'à '+state.speed+' nds, '+Math.round(total)+' M');
   var td=tideNear(H().tides.nassau,eta);var tx='—',ts='—';if(td.prev&&td.next){var h=(td.prev[1]==='H'?'descend':'monte');tx=h;ts=(td.prev[1]==='H'?'PM ':'BM ')+td.prev[0].slice(11)+' → '+(td.next[1]==='H'?'PM ':'BM ')+td.next[0].slice(11)+' ('+fr(td.next[2],2)+' m)'}$('a-tide').textContent=tx;$('a-tide-s').textContent=ts;
   var ev=sunEvents(ek.slice(0,10),25.08,-77.33),em=(+ek.slice(11,13))*60+(+ek.slice(14,16));$('a-light').textContent=ev.set!=null&&em<ev.set?dur(ev.set-em):'nuit';$('a-light-s').textContent=ev.set!=null?'coucher '+hm(ev.set)+' à Nassau':'—';
+  $('a-tidesvg').innerHTML=tideSvg(H().tides.nassau,ek.slice(0,10),[{m:em,label:(state.mode==='avion'?'atterrissage ':'arrivée ')+ek.slice(11)}]);$('a-tide-k').textContent=dow(ek)+' '+(+ek.slice(8,10))+' · MLLW';
   var cE=condAt(4,eta);$('arr-list').innerHTML=['<div class="row"><div>Conditions à l’arrivée<small>chenal est de Nassau</small></div><b>'+(cE.wind!=null?Math.round(cE.wind)+' nds '+compass(cE.wdir||0):'—')+' · '+(cE.hs!=null?fr(cE.hs,1)+' m':'—')+'</b></div>',
-    '<div class="row"><div>Marées de Nassau ce jour-là<small>'+H().tides.nassau.filter(function(x){return x[0].slice(0,10)===ek.slice(0,10)}).map(function(x){return (x[1]==='H'?'PM ':'BM ')+x[0].slice(11)+' '+fr(x[2],2)+' m'}).join(' · ')+'</small></div><b>MLLW</b></div>','<div class="row"><div>Vers l’aéroport<small>Potter’s Cay → NAS, taxi 25 à 35 min, préclearance USA sur place</small></div><b>~ 35 $</b></div>',
+    '<div class="row"><div>Vers l’aéroport<small>Potter’s Cay → NAS, taxi 25 à 35 min, préclearance USA sur place</small></div><b>~ 35 $</b></div>',
     '<div class="row"><div>Bahamas Ferries · Potter’s Cay<small>si retour par le ferry</small></div><b>+1 242 323-2166</b></div>'].concat((function(){var s=trackStats();return s?['<div class="row"><div>Trace enregistrée<small>'+s.n+' points, bouton Rec sur la carte</small></div><b>'+fr(s.nm,1)+' M · '+fr(s.avg,1)+' nds</b></div>']:[]})()).join('')}
 /* ---------- thème, onglets, réglages ---------- */
 function applyTheme(){var t=state.theme;if(t==='auto'){var s=solar(new Date(),25.2,-76.8);t=s.elev>-3?'day':'night'}document.documentElement.setAttribute('data-theme',t)}
