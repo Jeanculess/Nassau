@@ -96,6 +96,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--cond);font
 .count .big.go{color:var(--green)}.count .s{margin-top:4px}
 .wxline{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.9rem}.wxline span{white-space:nowrap}.wxline b{font-family:var(--mono);font-weight:700}
 button.wide{width:100%;font:inherit;font-size:.85rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bg);background:var(--cyan);border:0;border-radius:10px;padding:11px;cursor:pointer}
+.alert#hint{cursor:pointer}
+.sat{position:relative;border-radius:10px;overflow:hidden;background:#06101c;aspect-ratio:1/1;max-width:100%;margin-top:4px}
+.sat img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;transform-origin:0 0;display:block}
+.sat .cross{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border:2px solid var(--amber);border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.45);pointer-events:none}
+.sat .tag{position:absolute;left:8px;bottom:8px;right:8px;font-size:.74rem;color:#fff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:8px;font-family:var(--mono)}
+.sat .zoomtag{position:absolute;right:8px;top:8px;display:flex;gap:4px}.sat .zoomtag button{font:inherit;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;border:0;background:rgba(255,255,255,.85);color:#0f2238;border-radius:6px;padding:3px 7px;cursor:pointer}.sat .zoomtag button[aria-pressed=true]{background:var(--amber)}
+.satbox[hidden]{display:none}
 .alert{display:none;background:color-mix(in srgb,var(--amber) 22%,var(--panel));border:1px solid var(--amber);border-radius:10px;padding:7px 10px;font-size:.86rem;color:var(--ink)}
 .alert.on{display:block}
 .map .track{fill:none;stroke:var(--cyan);stroke-width:2.5;stroke-dasharray:1 5;stroke-linecap:round}
@@ -183,6 +190,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
     <section class="screen" id="s-dep">
       <h1>Départ <span id="dep-when">—</span></h1>
+      <div class="alert" id="hint">Glisse latéralement entre Départ, Mer, Route, Ciel et Arrivée. Réglages en haut à droite pour le jour, l’heure et la vitesse. Sur la carte : GPS, Estime, Main et Rec. Touche ici pour fermer.</div>
       <div class="tile wide count"><div class="k" style="justify-content:center" id="count-k">Compte à rebours</div><div class="big num" id="countdown">—</div><div class="s" id="count-s">—</div></div>
       <div class="grid">
         <div class="tile"><div class="k">Score</div><div class="v" id="d-score">—</div><div class="s" id="d-score-s">—</div></div>
@@ -241,6 +249,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
         <div class="tile"><div class="k">Lune</div><div class="v"><span id="moon">—</span><small>%</small></div><div class="s" id="moon-s">—</div></div>
       </div>
       <div class="tile wide"><div class="k">Ciel sur la route <span>% de nuages, heure par heure</span></div><div class="strip" id="cloudstrip"></div><div class="striplab" id="cloudlab"></div></div>
+      <div class="tile wide satbox" id="satbox"><div class="k">Satellite GOES-19 <span id="sat-k">maintenant</span></div><div class="sat"><img id="satimg" crossorigin="anonymous" alt="Image satellite, secteur Caraïbes"><div class="cross"></div><div class="zoomtag"><button type="button" data-z="2" aria-pressed="false">Large</button><button type="button" data-z="4" aria-pressed="true">Route</button><button type="button" data-z="8" aria-pressed="false">Près</button></div><div class="tag" id="sattag">chargement</div></div></div>
     </section>
 
     <section class="screen" id="s-arr">
@@ -458,9 +467,11 @@ function renderMapInfo(){if(state.mode==='avion'){$('m-dist').textContent=Math.r
 })();
 /* ---------- position ---------- */
 var watchId=null,prevFix=null;
-function setSrc(s){state.src=s;save();document.querySelectorAll('.src button[data-src]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.src===s?'true':'false')});if(s!=='gps'&&watchId!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(watchId)}catch(e){}watchId=null;$('led-gps').className='led'}
+function setSrc(s){state.src=s;save();document.querySelectorAll('.src button[data-src]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.src===s?'true':'false')});if(s!=='gps'&&watchId!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(watchId)}catch(e){}watchId=null;$('led-gps').className='led';unlock()}
   if(s==='gps')startGps();else if(s==='dr')updateDR();else if(s==='man'){if(state.man)fix={lat:state.man[0],lon:state.man[1],speed:null,cog:null};openSheet()}renderMap()}
-function startGps(){if(!navigator.geolocation){$('led-gps').className='led warn';return}try{watchId=navigator.geolocation.watchPosition(function(p){var c=p.coords,now=Date.now(),sp=(c.speed!=null&&isFinite(c.speed))?c.speed*1.943844:null,cog=(c.heading!=null&&isFinite(c.heading))?c.heading:null;if((sp==null||cog==null)&&prevFix&&now-prevFix.t>8000){var d=dist([prevFix.lat,prevFix.lon],[c.latitude,c.longitude]),h=(now-prevFix.t)/3600000;if(sp==null&&h>0)sp=d/h;if(cog==null&&d>0.02)cog=brg([prevFix.lat,prevFix.lon],[c.latitude,c.longitude])}if(!prevFix||now-prevFix.t>8000)prevFix={lat:c.latitude,lon:c.longitude,t:now};fix={lat:c.latitude,lon:c.longitude,speed:sp,cog:cog,acc:c.accuracy};$('led-gps').className='led on';recPoint();renderMap();renderArr();if(!window.__lastMer||Date.now()-window.__lastMer>30000){window.__lastMer=Date.now();renderMer()}},function(){$('led-gps').className='led warn'},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}catch(e){$('led-gps').className='led warn'}}
+var wake=null;function lock(){try{if(navigator.wakeLock&&navigator.wakeLock.request)navigator.wakeLock.request('screen').then(function(w){wake=w}).catch(function(){})}catch(e){}}
+function unlock(){if(wake){try{wake.release()}catch(e){}wake=null}}
+function startGps(){if(!navigator.geolocation){$('led-gps').className='led warn';return}lock();try{watchId=navigator.geolocation.watchPosition(function(p){var c=p.coords,now=Date.now(),sp=(c.speed!=null&&isFinite(c.speed))?c.speed*1.943844:null,cog=(c.heading!=null&&isFinite(c.heading))?c.heading:null;if((sp==null||cog==null)&&prevFix&&now-prevFix.t>8000){var d=dist([prevFix.lat,prevFix.lon],[c.latitude,c.longitude]),h=(now-prevFix.t)/3600000;if(sp==null&&h>0)sp=d/h;if(cog==null&&d>0.02)cog=brg([prevFix.lat,prevFix.lon],[c.latitude,c.longitude])}if(!prevFix||now-prevFix.t>8000)prevFix={lat:c.latitude,lon:c.longitude,t:now};fix={lat:c.latitude,lon:c.longitude,speed:sp,cog:cog,acc:c.accuracy};$('led-gps').className='led on';recPoint();renderMap();renderArr();if(!window.__lastMer||Date.now()-window.__lastMer>30000){window.__lastMer=Date.now();renderMer()}},function(){$('led-gps').className='led warn'},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}catch(e){$('led-gps').className='led warn'}}
 function updateDR(){var t0=localToDate(state.day+'T'+state.time).getTime(),el=(Date.now()-t0)/3600000;if(el<0||el*state.speed>routeLegs(ROUTES[state.route]).slice(-1)[0]+5){fix=null;return}var p=posAlong(el*state.speed);var nxt=posAlong(el*state.speed+1);fix={lat:p[0],lon:p[1],speed:state.speed,cog:brg(p,nxt),dr:true}}
 document.querySelectorAll('.src button[data-src]').forEach(function(b){b.addEventListener('click',function(){setSrc(b.dataset.src)})});
 $('f-man-go').addEventListener('click',function(){var la=parseFloat(($('f-lat').value||'').replace(',','.')),lo=parseFloat(($('f-lon').value||'').replace(',','.'));if(isFinite(la)&&isFinite(lo)){state.man=[la,lo];save();fix={lat:la,lon:lo,speed:null,cog:null};setSrc('man');closeSheet()}});
@@ -474,12 +485,12 @@ $('rec').addEventListener('click',function(){if(!recOn){recOn=true;$('rec').setA
 function renderDep(){var r=ROUTES[state.route],t0=localToDate(state.day+'T'+state.time),sc=score(state.day,state.time,state.speed,state.route),lab=scoreLabel(sc);
   $('dep-when').textContent=dow(state.day,true)+' '+(+state.day.slice(8,10))+' · '+state.time+(state.mode==='avion'?' · vol':' · '+state.speed+' nds');
   $('d-score').textContent=sc==null?'—':sc;$('d-score').style.color=lab[1]==='good'?'var(--green)':lab[1]==='bad'?'var(--red)':lab[1]==='warn'?'var(--amber)':'';$('d-score-s').textContent=lab[0];
-  var td=tideAt(H().tides.eleuthera,t0);$('d-tide').textContent=td?fr(td.h,2):'—';$('d-tide-s').textContent=td?(td.rising?'montante':'descendante')+' · '+(td.next[1]==='H'?'PM':'BM')+' '+td.next[0].slice(11)+(td.h<0.35?' · peu d’eau à la plage':''):'—';
+  var td=tideAt(H().tides.eleuthera,t0);$('d-tide').textContent=td?fr(td.h,2):'—';$('d-tide-s').textContent=td?(td.rising?'montante':'descendante')+' · '+(td.next[1]==='H'?'PM':'BM')+' '+td.next[0].slice(11)+(td.h<0.35?' · peu d’eau':''):'—';
   var ev=sunEvents(state.day,r.pts[0][0],r.pts[0][1]),dm=(+state.time.slice(0,2))*60+(+state.time.slice(3,5));$('d-sun').textContent=ev.rise!=null?hm(ev.rise):'—';$('d-sun-s').textContent=ev.rise==null?'—':dm<ev.rise?'départ de nuit, lever à '+hm(ev.rise):dm<ev.gold1?'départ à l’heure dorée':'coucher '+hm(ev.set);
   var c=condAt(state.mode==='avion'?0:0,t0);$('d-wx').innerHTML=['vent <b>'+(c.wind==null?'—':Math.round(c.wind)+' nds '+compass(c.wdir||0))+'</b>','rafales <b>'+(c.gust==null?'—':Math.round(c.gust))+'</b>','mer <b>'+(c.hs==null?'—':fr(c.hs,1)+' m')+'</b>','pluie <b>'+(c.pp==null?'—':Math.round(c.pp)+' %')+'</b>','air <b>'+(c.temp==null?'—':Math.round(c.temp)+' °C')+'</b>','eau <b>'+(c.sst==null?'—':Math.round(c.sst)+' °C')+'</b>','ciel <b>'+(c.code>=95?'orages':c.code>=80?'averses':c.cloud>80?'couvert':c.cloud>40?'nuageux':'dégagé')+'</b>'].map(function(x){return '<span>'+x+'</span>'}).join('');
   var n=document.querySelectorAll('#checklist input').length,k=document.querySelectorAll('#checklist input:checked').length;$('d-check-n').textContent=k+' / '+n;}
 function renderCount(){var t0=localToDate(state.day+'T'+state.time).getTime(),now=Date.now(),d=(t0-now)/1000,el=$('countdown');var r=ROUTES[state.route],legs=routeLegs(r),durS=(state.mode==='avion'?FLIGHT.minutes*60:legs[legs.length-1]/state.speed*3600);
-  if(d>0){var h=Math.floor(d/3600),m=Math.floor(d%3600/60),s=Math.floor(d%60);el.textContent=(h>0?h+' h ':'')+pad(m)+' min '+pad(s)+' s';el.className='big num';$('count-k').textContent='Départ dans';$('count-s').textContent=d<3600?'c’est bientôt, dernier point météo sur Mer':'à '+state.time+' · '+dow(state.day,true)+' '+(+state.day.slice(8,10))}
+  if(d>0){var h=Math.floor(d/3600),m=Math.floor(d%3600/60),s=Math.floor(d%60);el.textContent=h>0?h+' h '+pad(m)+' min':pad(m)+' min '+pad(s)+' s';el.className='big num';$('count-k').textContent='Départ dans';$('count-s').textContent=d<3600?'c’est bientôt, dernier point météo sur Mer':'à '+state.time+' · '+dow(state.day,true)+' '+(+state.day.slice(8,10))}
   else if(-d<durS){var e=-d,h2=Math.floor(e/3600),m2=Math.floor(e%3600/60);el.textContent=(h2>0?h2+' h ':'')+pad(m2)+' min';el.className='big num go';$('count-k').textContent='Parti depuis';$('count-s').textContent='arrivée prévue '+dateToLocalKey(new Date(t0+durS*1000)).slice(11)}
   else{el.textContent='arrivé';el.className='big num go';$('count-k').textContent='Traversée terminée';$('count-s').textContent='bon retour'}}
 /* ---------- Ciel ---------- */
@@ -501,6 +512,14 @@ function renderCiel(){var r=ROUTES[state.route],legs=routeLegs(r),total=legs[leg
   var st=[],lab=[];for(var h=0;h<=Math.ceil(durMin/60);h++){var w=new Date(localToDate(state.day+'T'+state.time).getTime()+h*3600000),d=Math.min(total,h*state.speed),pos=posAlong(d),i=Math.round(d/total*(r.pts.length-1)),c=condAt(r.fci[i],w),el=solar(w,pos[0],pos[1]).elev;st.push('<i class="'+(el<-0.833?'n':'')+'" style="height:'+(c.cloud==null?5:Math.max(5,c.cloud))+'%" title="'+Math.round(c.cloud||0)+' %"></i>')}
   $('cloudstrip').innerHTML=st.join('');$('cloudlab').innerHTML='<span>'+state.time+'</span><span>'+hm(etaMin)+'</span>';
 }
+/* ---------- satellite ---------- */
+var SATC={x:0.237,y:0.313},satZoom=4;
+function satUrl(){return 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/car/GEOCOLOR/1000x1000.jpg?t='+Math.floor(Date.now()/600000)}
+function satZoomApply(){var img=$('satimg'),box=img.parentNode,s=box.clientWidth||300,tx=s*(0.5-SATC.x*satZoom),ty=s*(0.5-SATC.y*satZoom);img.style.transform='translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) scale('+satZoom+')';document.querySelectorAll('.sat .zoomtag button').forEach(function(b){b.setAttribute('aria-pressed',(+b.dataset.z)===satZoom?'true':'false')})}
+function satAnalyze(img){try{var c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;var x=c.getContext('2d');x.drawImage(img,0,0);var cx=Math.round(SATC.x*c.width),cy=Math.round(SATC.y*c.height),R=Math.max(4,Math.round(c.width*0.022));var d=x.getImageData(cx-R,cy-R,2*R+1,2*R+1).data,n=0,cl=0,day=solar(new Date(),25.15,-76.8).elev>0;for(var i=0;i<d.length;i+=4){var r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b)/255,mn=Math.min(r,g,b)/255,s=mx?(mx-mn)/mx:0;n++;if(day?(mx>0.55&&s<0.3):(mx>0.33&&s<0.55))cl++}return {frac:cl/n,day:day}}catch(e){return null}}
+function loadSat(){var img=$('satimg');if(!img)return;img.onload=function(){satZoomApply();var a=satAnalyze(img),p=nowParts();$('sattag').textContent='chargée '+pad(p.h)+':'+pad(p.mi)+(a?' · nuages sur la route '+Math.round(a.frac*100)+' %'+(a.day?'':' (IR, nuit)'):'');$('sat-k').textContent=a?Math.round(a.frac*100)+' % de nuages dans 180 km':'maintenant';fetch(satUrl(),{method:'HEAD'}).then(function(r){var lm=r.headers.get('last-modified');if(lm){var k=dateToLocalKey(new Date(lm));$('sattag').textContent=$('sattag').textContent.replace(/chargée [0-9:]+/,'image '+k.slice(11))}}).catch(function(){})};img.onerror=function(){$('satbox').hidden=true};img.src=satUrl()}
+document.querySelectorAll('.sat .zoomtag button').forEach(function(b){b.addEventListener('click',function(){satZoom=+b.dataset.z;satZoomApply()})});
+window.addEventListener('resize',satZoomApply);
 /* ---------- Arrivée ---------- */
 function tideNear(list,when){var k=dateToLocalKey(when),prev=null,next=null;for(var i=0;i<list.length;i++){var t=list[i][0].replace(' ','T');if(t<=k)prev=list[i];else{next=list[i];break}}return {prev:prev,next:next}}
 function renderArr(){var r=ROUTES[state.route],legs=routeLegs(r),total=legs[legs.length-1],durMin=state.mode==='avion'?FLIGHT.minutes:total/state.speed*60,eta=new Date(localToDate(state.day+'T'+state.time).getTime()+durMin*60000);
@@ -535,6 +554,7 @@ function brief(){var lines=[];var sc=score(state.day,state.time,state.speed,stat
   lines.push('NHC '+(H().nhc.issued||'')+' : '+$('nhc').textContent.slice(0,220));lines.push('Données '+(DATA.fetchedAt||'').replace('T',' ')+(DATA.live?' (direct)':' (instantané)'));
   var txt=lines.join('\n');var done=function(){$('alert').textContent='Brief copié, à coller dans un message au capitaine.';$('alert').classList.add('on');goTo(1)};if(navigator.share){navigator.share({title:'Brief retour',text:txt}).catch(function(){try{navigator.clipboard.writeText(txt).then(done)}catch(e){}});return}try{navigator.clipboard.writeText(txt).then(done,function(){$('alert').textContent=txt;$('alert').classList.add('on')})}catch(e){$('alert').textContent=txt;$('alert').classList.add('on')}}
 $('btn-brief2').addEventListener('click',brief);
+(function(){var h=$('hint');if(!store.get('retour-hint')){h.classList.add('on')}h.addEventListener('click',function(){h.classList.remove('on');store.set('retour-hint',1)})})();
 $('btn-brief').addEventListener('click',brief);
 document.querySelectorAll('#f-theme button').forEach(function(b){b.addEventListener('click',function(){state.theme=b.dataset.t;save();applyTheme();fillSettings()})});
 /* checklist */
@@ -555,9 +575,9 @@ function renderAll(){ensureDay();if(state.src==='dr')updateDR();renderDep();rend
 function tick(){var p=nowParts();$('clock').textContent=pad(p.h)+':'+pad(p.mi);renderCount();if(state.src==='dr'){updateDR();renderMapInfo()}}
 applyTheme();ensureDay();renderAll();setSrc(state.src);fitRoute();tick();
 if('serviceWorker' in navigator&&/github\.io$/.test(location.hostname)){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
-setInterval(tick,1000);setInterval(function(){applyTheme();if(state.src==='dr')renderMap()},60000);setInterval(refresh,1800000);refresh();
+setInterval(tick,1000);setInterval(function(){applyTheme();if(state.src==='dr')renderMap()},60000);setInterval(refresh,1800000);refresh();loadSat();setInterval(loadSat,600000);
 window.addEventListener('resize',function(){fitRoute();var i=+$('app').dataset.screen||0;deck.scrollLeft=deck.clientWidth*i});
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){tick();if(DATA.fetchedAt&&Date.now()-localToDate(DATA.fetchedAt).getTime()>1800000)refresh()}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){tick();if(watchId!=null)lock();if(DATA.fetchedAt&&Date.now()-localToDate(DATA.fetchedAt).getTime()>1800000)refresh()}});
 })();
 </script>
 
