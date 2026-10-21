@@ -162,6 +162,12 @@ button.wide{width:100%;font:inherit;font-size:.85rem;font-weight:700;letter-spac
 .tidebox text{font-family:var(--mono);font-size:10px;fill:var(--dim);paint-order:stroke;stroke:var(--panel);stroke-width:3px}
 .tidebox .ext{fill:var(--cyan)}.tidebox .mark{stroke:var(--amber);stroke-width:1.5;stroke-dasharray:3 3}.tidebox .markdot{fill:var(--amber)}
 .tidebox text.markl{fill:var(--amber);font-family:var(--cond);font-size:12px;letter-spacing:.04em}.tidebox .now{fill:#fff;stroke:var(--amber);stroke-width:2}
+/* journée heure par heure */
+.daybox svg{width:100%;height:auto;display:block;margin-top:2px}
+.daybox rect.w{opacity:.9}.daybox rect.w.s0{fill:var(--green)}.daybox rect.w.s1{fill:var(--amber)}.daybox rect.w.s2{fill:var(--red)}
+.daybox rect.r{fill:var(--cyan);opacity:.85}.daybox rect.cl{fill:var(--dim)}.daybox line.g{stroke:var(--ink);stroke-width:1.5}
+.daybox text{font-family:var(--mono);font-size:10px;fill:var(--dim)}.daybox text.st{font-size:11px}.daybox path.dir{fill:var(--ink)}
+.daybox line.mark{stroke:var(--amber);stroke-width:1.5;stroke-dasharray:3 3}.daybox line.base{stroke:var(--line)}
 /* ciel */
 .arcbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
 .arcbox svg{width:100%;height:auto;display:block}
@@ -277,6 +283,7 @@ button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
         <div class="tile"><div class="k">Lune</div><div class="v"><span id="moon">—</span><small>%</small></div><div class="s" id="moon-s">—</div></div>
       </div>
       <div class="tile wide"><div class="k">Ciel sur la route <span>% de nuages, heure par heure</span></div><div class="strip" id="cloudstrip"></div><div class="striplab" id="cloudlab"></div></div>
+      <div class="tile wide daybox"><div class="k">Heure par heure <span id="day-k">Cocodimama · vent · rafales · nuages · pluie</span></div><svg viewBox="0 0 360 100" id="daysvg" role="img" aria-label="Vent, rafales, nuages et pluie heure par heure"></svg></div>
       <div class="tile wide satbox" id="satbox"><div class="k">Satellite GOES-19 <span id="sat-k">maintenant</span></div><div class="sat"><img id="satimg" crossorigin="anonymous" alt="Image satellite, secteur Caraïbes"><div class="cross"></div><div class="zoomtag"><button type="button" data-z="2" aria-pressed="false">Large</button><button type="button" data-z="4" aria-pressed="true">Route</button><button type="button" data-z="8" aria-pressed="false">Près</button></div><div class="tag" id="sattag">chargement</div></div></div>
     </section>
 
@@ -579,8 +586,18 @@ function renderCiel(){var r=ROUTES[state.route],legs=routeLegs(r),total=legs[leg
   var mn=moon(now,25.2,-76.8),me=moonEvents(state.day,25.2,-76.8);$('moon').textContent=Math.round(mn.illum*100);$('moon-s').textContent=(mn.illum>0.97?'pleine lune':mn.waxing?'croissante':'décroissante')+(me.rise!=null?' · lever '+hm(me.rise):'')+(me.set!=null?' · coucher '+hm(me.set):'');
   var st=[],lab=[];if(state.mode==='avion'){flightConds(state.day,state.time).forEach(function(c,i){var el=solar(c.when,FLIGHT.pts[i][0],FLIGHT.pts[i][1]).elev;st.push('<i class="'+(el<-0.833?'n':'')+'" style="height:'+(c.cloud==null?5:Math.max(5,c.cloud))+'%" title="'+Math.round(c.cloud||0)+' %"></i>')})}
   else for(var h=0;h<=Math.ceil(durMin/60);h++){var w=new Date(localToDate(state.day+'T'+state.time).getTime()+h*3600000),d=Math.min(total,h*state.speed),pos=posAlong(d),i=Math.round(d/total*(r.pts.length-1)),c=condAt(r.fci[i],w),el=solar(w,pos[0],pos[1]).elev;st.push('<i class="'+(el<-0.833?'n':'')+'" style="height:'+(c.cloud==null?5:Math.max(5,c.cloud))+'%" title="'+Math.round(c.cloud||0)+' %"></i>')}
-  $('cloudstrip').innerHTML=st.join('');$('cloudlab').innerHTML='<span>'+state.time+'</span><span>'+hm(etaMin)+'</span>';
+  $('cloudstrip').innerHTML=st.join('');$('cloudlab').innerHTML='<span>'+state.time+'</span><span>'+hm(etaMin)+'</span>';renderDayStrip();
 }
+function renderDayStrip(){var el=$('daysvg');if(!el)return;var pt=0,W=360,x0=24,x1=W-4,yW0=18,yW1=58,yR0=66,yR1=84,o=[],h0=5,h1=20,n=h1-h0+1,cw=(x1-x0)/n;
+  o.push('<text x="2" y="'+(yW0+10)+'">nds</text><text x="2" y="'+(yR0+12)+'">%</text><line class="base" x1="'+x0+'" y1="'+yW1+'" x2="'+x1+'" y2="'+yW1+'"/><line class="base" x1="'+x0+'" y1="'+yR1+'" x2="'+x1+'" y2="'+yR1+'"/>');
+  for(var h=h0;h<=h1;h++){var k=state.day+'T'+pad(h)+':00',w=at(pt,'wind_speed_10m',k),g=at(pt,'wind_gusts_10m',k),d=at(pt,'wind_direction_10m',k),pp=at(pt,'precipitation_probability',k),cl=at(pt,'cloud_cover',k),code=at(pt,'weather_code',k),x=x0+(h-h0)*cw;
+    if(cl!=null)o.push('<rect class="cl" x="'+x.toFixed(1)+'" y="'+(yW0-12)+'" width="'+cw.toFixed(1)+'" height="5" style="opacity:'+(0.08+cl/100*0.8).toFixed(2)+'"/>');
+    if(w!=null){var hh=Math.max(1,Math.min(1,w/30)*(yW1-yW0));o.push('<rect class="w '+(w<10?'s0':w<16?'s1':'s2')+'" x="'+(x+1).toFixed(1)+'" y="'+(yW1-hh).toFixed(1)+'" width="'+(cw-2).toFixed(1)+'" height="'+hh.toFixed(1)+'"/>');if(g!=null&&g>w+1){var gy=yW1-Math.min(1,g/30)*(yW1-yW0);o.push('<line class="g" x1="'+(x+1).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(x+cw-1).toFixed(1)+'" y2="'+gy.toFixed(1)+'"/>')}if(d!=null)o.push('<path class="dir" transform="translate('+(x+cw/2).toFixed(1)+','+(yW1-hh-5).toFixed(1)+') rotate('+((d+180)%360).toFixed(0)+')" d="M0,-3.5 L3,3 L-3,3 Z"/>')}
+    if(pp!=null){var rh=pp/100*(yR1-yR0);o.push('<rect class="r" x="'+(x+1).toFixed(1)+'" y="'+(yR1-rh).toFixed(1)+'" width="'+(cw-2).toFixed(1)+'" height="'+rh.toFixed(1)+'"/>')}
+    if(code!=null&&code>=95)o.push('<text class="st" x="'+(x+cw/2).toFixed(1)+'" y="'+(yR0-1)+'" text-anchor="middle">⚡</text>');
+    if(h%3===0)o.push('<text x="'+(x+cw/2).toFixed(1)+'" y="'+(yR1+11)+'" text-anchor="middle">'+h+'h</text>')}
+  var dm=(+state.time.slice(0,2))+(+state.time.slice(3,5))/60;if(dm>=h0&&dm<=h1+1){var xm=x0+(dm-h0)*cw;o.push('<line class="mark" x1="'+xm.toFixed(1)+'" y1="'+(yW0-14)+'" x2="'+xm.toFixed(1)+'" y2="'+yR1+'"/>')}
+  el.innerHTML=o.join('');var wmax=null,pmax=null;for(var h2=h0;h2<=h1;h2++){var k2=state.day+'T'+pad(h2)+':00',w2=at(pt,'wind_speed_10m',k2),p2=at(pt,'precipitation_probability',k2);if(w2!=null&&(wmax==null||w2>wmax))wmax=w2;if(p2!=null&&(pmax==null||p2>pmax))pmax=p2}$('day-k').textContent=dow(state.day)+' '+(+state.day.slice(8,10))+' · Cocodimama · vent ≤ '+(wmax==null?'—':Math.round(wmax))+' nds · pluie ≤ '+(pmax==null?'—':Math.round(pmax))+' %'}
 /* ---------- satellite ---------- */
 var SATC={x:0.237,y:0.313},satZoom=4;
 function satUrl(){return 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/car/GEOCOLOR/1000x1000.jpg?t='+Math.floor(Date.now()/600000)}
